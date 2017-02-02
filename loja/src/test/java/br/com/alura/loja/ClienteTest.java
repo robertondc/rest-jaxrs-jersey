@@ -33,7 +33,7 @@ public class ClienteTest {
 	public void testaQueAConexaoComOServidorFunciona() {
 		Client client = ClientBuilder.newClient();
 		WebTarget target = client.target("http://localhost:8080");
-		String conteudo = target.path("/carrinhos").request().get(String.class);
+		String conteudo = target.path("/carrinhos/1").request().get(String.class);
 		Carrinho carrinho = (Carrinho) new XStream().fromXML(conteudo);
 		Assert.assertEquals("Rua Vergueiro 3185, 8 andar", carrinho.getRua());
 	}
@@ -42,7 +42,7 @@ public class ClienteTest {
 	public void testaQueAConexaFuncionaComOServidorNoPathDeProjetos(){
 		Client client = ClientBuilder.newClient();
 		WebTarget target = client.target("http://localhost:8080");
-		String conteudo = target.path("/projetos").request().get(String.class);
+		String conteudo = target.path("/projetos/1").request().get(String.class);
 		Projeto projeto = (Projeto) new XStream().fromXML(conteudo);
 		Assert.assertEquals("Minha Loja", projeto.getNome());
 	}
