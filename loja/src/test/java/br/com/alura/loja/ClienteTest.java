@@ -23,6 +23,7 @@ public class ClienteTest {
 
 	private HttpServer server;
 	private WebTarget target;
+	private Client client;
 
 	@Before
 	public void iniciaServidor(){
@@ -31,7 +32,7 @@ public class ClienteTest {
 	
 	@Before
 	public void iniciaCliente(){
-		Client client = ClientBuilder.newClient();
+		client = ClientBuilder.newClient();
 		target = client.target("http://localhost:8080");
 	}
 	
@@ -64,7 +65,12 @@ public class ClienteTest {
 		
 		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML); //representa oque será enviado
 		Response response = target.path("/carrinhos").request().post(entity);
-		Assert.assertEquals("<status>sucesso</status>", response.readEntity(String.class));
+		Assert.assertEquals(201, response.getStatus());
+		
+		String location = response.getHeaderString("Location");
+		String conteudo = client.target(location).request().get(String.class);
+		Assert.assertTrue(conteudo.contains("Tablet"));
+		
 	}
 	
 	@Test
@@ -74,7 +80,11 @@ public class ClienteTest {
 		
 		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML);
 		Response response = target.path("/projetos").request().post(entity);
-		Assert.assertEquals("<status>sucessoProjeto</status>", response.readEntity(String.class));
+		Assert.assertEquals(201, response.getStatus());
+		
+		String location = response.getHeaderString("Location");
+		String conteudo = client.target(location).request().get(String.class);
+		Assert.assertTrue(conteudo.contains("novo projeto"));
 		
 	}
 	
