@@ -61,7 +61,7 @@ public class ClienteTest {
 		carrinho.adiciona(new Produto(314L, "Tablet", 999, 1));
 		carrinho.setRua("Rua Vergueiro");
 		carrinho.setCidade("Sao Paulo");
-		String xml = carrinho.getXml();
+		String xml = carrinho.toXml();
 		
 		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML); //representa oque será enviado
 		Response response = target.path("/carrinhos").request().post(entity);
@@ -87,5 +87,58 @@ public class ClienteTest {
 		Assert.assertTrue(conteudo.contains("novo projeto"));
 		
 	}
+	
+	@Test
+	public void testaQueARemocaoDoCarrinhoEstaFuncionando(){
+		Carrinho carrinho = new Carrinho();
+		Produto produtoRemover = new Produto(123l, "batata", 999, 1);
+		carrinho.adiciona(produtoRemover);
+		carrinho.adiciona(new Produto(456l, "queijo", 888, 2));
+		carrinho.setRua("Rua das batatas, 123");
+		carrinho.setCidade("Sao Paulo");
+		String xml = carrinho.toXml();
+		
+		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML);
+		Response responsePost = (Response) target.path("/carrinhos").request().post(entity);
+		String locationProduto = responsePost.getHeaderString("Location");
+		
+		Assert.assertEquals(201, responsePost.getStatus());
+			
+		String xmlPreDelete = client.target(locationProduto).request().get(String.class);
+		Carrinho carrinhoRetornoInsert = (Carrinho) new XStream().fromXML(xmlPreDelete);
+		
+		Response responseDelete = target.path("/carrinhos/" + carrinhoRetornoInsert.getId() + "/produtos/" + produtoRemover.getId()).request().delete();
+		
+		Assert.assertEquals(200, responseDelete.getStatus());
+		
+		String xmlPosDelete = client.target(locationProduto).request().get(String.class);
+		Carrinho carrinhoRetornoDelete = (Carrinho) new XStream().fromXML(xmlPosDelete);
+
+		Assert.assertTrue(carrinhoRetornoDelete.getProdutos().size() == 1);
+		
+	}
+	
+	@Test
+	public void testaQueARemocaoDeProjetoEstaFuncionando(){
+		Projeto projeto = new Projeto(1l, "Queijo", 2016);
+		String xmlInsert = projeto.toXml();
+		
+		Entity<String> entity = Entity.entity(xmlInsert, MediaType.APPLICATION_XML);
+		Response responsePost = target.path("/projetos").request().post(entity);
+		
+		String locationProjeto = responsePost.getHeaderString("Location");
+		
+		Assert.assertEquals(201,  responsePost.getStatus());
+		
+		String xmlRetorno = client.target(locationProjeto).request().get(String.class);
+		Projeto projetoRetornoInsert = (Projeto) new XStream().fromXML(xmlRetorno);
+		
+		Response responseDelete = target.path("/projetos/" + projetoRetornoInsert.getId()).request().delete();
+		Assert.assertEquals(200, responseDelete.getStatus());
+		
+		Response responsePosDelete = target.path("/projetos/" + projetoRetornoInsert.getId()).request().get();
+		Assert.assertEquals(404, responsePosDelete.getStatus());
+	}
+	
 	
 }
