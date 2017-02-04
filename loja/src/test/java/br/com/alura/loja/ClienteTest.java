@@ -47,8 +47,7 @@ public class ClienteTest {
 	
 	@Test
 	public void testaQueAConexaoComOServidorFunciona() {
-		String conteudo = target.path("/carrinhos/1").request().get(String.class);
-		Carrinho carrinho = (Carrinho) new XStream().fromXML(conteudo);
+		Carrinho carrinho = target.path("/carrinhos/1").request().get(Carrinho.class);
 		Assert.assertEquals("Rua Vergueiro 3185, 8 andar", carrinho.getRua());
 	}
 
@@ -62,18 +61,18 @@ public class ClienteTest {
 	@Test
 	public void testaQueAInsercaoDeCarrinhosFunciona(){
 		Carrinho carrinho = new Carrinho();
-		carrinho.adiciona(new Produto(314L, "Tablet", 999, 1));
+		String nomeProduto = "Tablet";
+		carrinho.adiciona(new Produto(314L, nomeProduto, 999, 1));
 		carrinho.setRua("Rua Vergueiro");
 		carrinho.setCidade("Sao Paulo");
-		String xml = carrinho.toXml();
 		
-		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML); //representa oque será enviado
+		Entity<Carrinho> entity = Entity.entity(carrinho, MediaType.APPLICATION_XML); //representa oque será enviado
 		Response response = target.path("/carrinhos").request().post(entity);
 		Assert.assertEquals(201, response.getStatus());
 		
 		String location = response.getHeaderString("Location");
-		String conteudo = client.target(location).request().get(String.class);
-		Assert.assertTrue(conteudo.contains("Tablet"));
+		Carrinho retorno = client.target(location).request().get(Carrinho.class);
+		Assert.assertEquals(nomeProduto,retorno.getProduto(314).getNome());
 		
 	}
 	
@@ -97,28 +96,28 @@ public class ClienteTest {
 		Carrinho carrinho = new Carrinho();
 		Produto produtoRemover = new Produto(123l, "batata", 999, 1);
 		carrinho.adiciona(produtoRemover);
-		carrinho.adiciona(new Produto(456l, "queijo", 888, 2));
+		Produto produtoNaoRemover = new Produto(456l, "queijo", 888, 2);
+		carrinho.adiciona(produtoNaoRemover);
 		carrinho.setRua("Rua das batatas, 123");
 		carrinho.setCidade("Sao Paulo");
-		String xml = carrinho.toXml();
 		
-		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML);
-		Response responsePost = (Response) target.path("/carrinhos").request().post(entity);
-		String locationProduto = responsePost.getHeaderString("Location");
+		Entity<Carrinho> entity = Entity.entity(carrinho, MediaType.APPLICATION_XML);
+		Response post = (Response) target.path("/carrinhos").request().post(entity);
+		String locationCarrinho = post.getHeaderString("Location");
 		
-		Assert.assertEquals(201, responsePost.getStatus());
-			
-		String xmlPreDelete = client.target(locationProduto).request().get(String.class);
-		Carrinho carrinhoRetornoInsert = (Carrinho) new XStream().fromXML(xmlPreDelete);
+		Assert.assertEquals(201, post.getStatus());
+			 
+		Carrinho carrinhoInserido = (Carrinho) client.target(locationCarrinho).request().get(Carrinho.class);
 		
-		Response responseDelete = target.path("/carrinhos/" + carrinhoRetornoInsert.getId() + "/produtos/" + produtoRemover.getId()).request().delete();
+		Response delete = target.path("/carrinhos/" + carrinhoInserido.getId() + "/produtos/" + produtoRemover.getId()).request().delete();
 		
-		Assert.assertEquals(200, responseDelete.getStatus());
+		Assert.assertEquals(200, delete.getStatus());
 		
-		String xmlPosDelete = client.target(locationProduto).request().get(String.class);
-		Carrinho carrinhoRetornoDelete = (Carrinho) new XStream().fromXML(xmlPosDelete);
+		Carrinho carrinhoComProdutoDeletado = (Carrinho) client.target(locationCarrinho).request().get(Carrinho.class);
 
-		Assert.assertTrue(carrinhoRetornoDelete.getProdutos().size() == 1);
+		Assert.assertTrue(carrinhoComProdutoDeletado.getProdutos().size() == 1);
+		Assert.assertNull(carrinhoComProdutoDeletado.getProduto(produtoRemover.getId()));
+		Assert.assertNotNull(carrinhoComProdutoDeletado.getProduto(produtoNaoRemover.getId()));
 		
 	}
 	
@@ -148,32 +147,30 @@ public class ClienteTest {
 	@Test
 	public void testaQueAAtualizacaoDeProdutosEstaFuncionando(){
 		Carrinho carrinho = new Carrinho();
+		
 		Produto produtoAlterar = new Produto(555l, "batata", 60.5, 2);
 		carrinho.adiciona(produtoAlterar);
 		carrinho.adiciona(new Produto(666l, "queijo", 30.1, 2));
 		carrinho.setRua("Rua das batatas, 123");
 		carrinho.setCidade("Sao Paulo");
-		String xml = carrinho.toXml();
 		
-		Entity<String> entity = Entity.entity(xml, MediaType.APPLICATION_XML);
-		Response responsePost = (Response) target.path("/carrinhos").request().post(entity);
-		String locationCarrinho = responsePost.getHeaderString("Location");
+		Entity<Carrinho> entity = Entity.entity(carrinho, MediaType.APPLICATION_XML);
+		Response post = (Response) target.path("/carrinhos").request().post(entity);
+		String locationCarrinho = post.getHeaderString("Location");
 		
-		Assert.assertEquals(201, responsePost.getStatus());
-			
-		String xmlCarrinhoInserido = client.target(locationCarrinho).request().get(String.class);
-		Carrinho carrinhoAlterar = (Carrinho) new XStream().fromXML(xmlCarrinhoInserido);
+		Assert.assertEquals(201, post.getStatus());
+		
+		Carrinho carrinhoAlterar = client.target(locationCarrinho).request().get(Carrinho.class);
 		
 		produtoAlterar.setQuantidade(1);
 	
-		Entity<String> entityProdutoAlterado = Entity.entity(produtoAlterar.toXml(), MediaType.APPLICATION_XML);
+		Entity<Produto> entityProduto = Entity.entity(produtoAlterar, MediaType.APPLICATION_XML);
 		String uriAlterarQuantidade = "/carrinhos/" + carrinhoAlterar.getId() + "/produtos/" + produtoAlterar.getId() + "/quantidade";
-		Response put = target.path(uriAlterarQuantidade).request().put(entityProdutoAlterado);
+		Response put = target.path(uriAlterarQuantidade).request().put(entityProduto);
 		
 		Assert.assertEquals(200, put.getStatus());
 		
-		String xmlCarrinhoAlterado =  target.path("/carrinhos/" + carrinhoAlterar.getId()).request().get(String.class);
-		Carrinho carrinhoAlterado = (Carrinho) new XStream().fromXML(xmlCarrinhoAlterado);
+		Carrinho carrinhoAlterado = (Carrinho) target.path("/carrinhos/" + carrinhoAlterar.getId()).request().get(Carrinho.class);
 		
 		Produto produtoAlterado = carrinhoAlterado.getProduto(produtoAlterar.getId());
 		Assert.assertEquals(1, produtoAlterado.getQuantidade());
