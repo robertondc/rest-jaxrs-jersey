@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-
 import com.google.gson.Gson;
 import com.thoughtworks.xstream.XStream;
 
@@ -83,6 +79,16 @@ public class Carrinho {
 
 	public String getJson() {
 		return new Gson().toJson(this);
+	}
+
+	public Produto getProduto(long produtoId) {
+		for (Iterator iterator = produtos.iterator(); iterator.hasNext();){
+			Produto produto = (Produto) iterator.next();
+			if (produto.getId() == produtoId){
+				return produto;
+			}
+		}
+		return null;
 	}
 
 }
